@@ -179,6 +179,8 @@ def main(_):
 
 def test_run():
 	X, Y = get_data(FLAGS.dataset)
+	np.save('Xdatas.npy', X)
+	np.save('Ylables.npy', Y)
 
 if __name__ == '__main__':
 #   tf.app.run()
