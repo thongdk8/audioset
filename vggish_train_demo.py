@@ -105,6 +105,7 @@ def get_data(path_to_dataset):
 		label = [0]*len(classes)
 		label[i] = 1
 		for f in fl:
+            print('load file', f)
 			r_data, sr = librosa.load(f)
 			data = vggish_input.waveform_to_examples(r_data, sr)
 			Xdatas.append(data)
