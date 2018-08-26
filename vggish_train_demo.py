@@ -1,47 +1,3 @@
-# Copyright 2017 The TensorFlow Authors All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# ==============================================================================
-
-r"""A simple demonstration of running VGGish in training mode.
-
-This is intended as a toy example that demonstrates how to use the VGGish model
-definition within a larger model that adds more layers on top, and then train
-the larger model. If you let VGGish train as well, then this allows you to
-fine-tune the VGGish model parameters for your application. If you don't let
-VGGish train, then you use VGGish as a feature extractor for the layers above
-it.
-
-For this toy task, we are training a classifier to distinguish between three
-classes: sine waves, constant signals, and white noise. We generate synthetic
-waveforms from each of these classes, convert into shuffled batches of log mel
-spectrogram examples with associated labels, and feed the batches into a model
-that includes VGGish at the bottom and a couple of additional layers on top. We
-also plumb in labels that are associated with the examples, which feed a label
-loss used for training.
-
-Usage:
-  # Run training for 100 steps using a model checkpoint in the default
-  # location (vggish_model.ckpt in the current directory). Allow VGGish
-  # to get fine-tuned.
-  $ python vggish_train_demo.py --num_batches 100
-
-  # Same as before but run for fewer steps and don't change VGGish parameters
-  # and use a checkpoint in a different location
-  $ python vggish_train_demo.py --num_batches 50 \
-                                --train_vggish=False \
-                                --checkpoint /path/to/model/checkpoint
-"""
 
 from __future__ import print_function
 
@@ -53,6 +9,10 @@ import tensorflow as tf
 import vggish_input
 import vggish_params
 import vggish_slim
+
+import librosa
+import os
+import utilities as util
 
 flags = tf.app.flags
 slim = tf.contrib.slim
@@ -71,6 +31,10 @@ flags.DEFINE_boolean(
 flags.DEFINE_string(
     'checkpoint', 'vggish_model.ckpt',
     'Path to the VGGish checkpoint file.')
+
+flags.DEFINE_string(
+    'dataset', 'path to dataset', 'path to dataset'
+)
 
 FLAGS = flags.FLAGS
 
@@ -123,6 +87,29 @@ def _get_examples_batch():
   features = [example for (example, _) in labeled_examples]
   labels = [label for (_, label) in labeled_examples]
   return (features, labels)
+
+def get_data(path_to_dataset):
+    classes = np.sort([c for c in os.listdir(path_to_dataset) if os.path.isdir(os.path.join(path_to_dataset, c))] )
+    print("Classes: ", classes)
+
+    labels = {}
+    for i in range(len(classes)):
+        labels[classes[i]]=i
+
+    files_lists = len(labels)*[None]
+    for i, c in enumerate(classes):
+        files_lists[i], _ = util.list_files(os.path.join(path_to_dataset, c))
+
+    Xdatas, Ylabels = [], []
+    for i, fl in enumerate(files_lists):
+        label = [0]*len(classes)
+        label[i] = 1
+        for f in fl:
+            r_data, sr = librosa.load(f)
+            data = vggish_input.waveform_to_examples(r_data, sr)
+            Xdatas.append(data)
+            Ylabels.append(label)
+    return Xdatas, Ylabels
 
 
 def main(_):
@@ -189,5 +176,8 @@ def main(_):
           feed_dict={features_tensor: features, labels_tensor: labels})
       print('Step %d: loss %g' % (num_steps, loss))
 
+def test_run():
+    X, Y = get_data(FLAGS.dataset)
+
 if __name__ == '__main__':
-  tf.app.run()
+#   tf.app.run()
