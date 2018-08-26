@@ -18,22 +18,22 @@ flags = tf.app.flags
 slim = tf.contrib.slim
 
 flags.DEFINE_integer(
-    'num_batches', 30,
-    'Number of batches of examples to feed into the model. Each batch is of '
-    'variable size and contains shuffled examples of each class of audio.')
+	'num_batches', 30,
+	'Number of batches of examples to feed into the model. Each batch is of '
+	'variable size and contains shuffled examples of each class of audio.')
 
 flags.DEFINE_boolean(
-    'train_vggish', True,
-    'If Frue, allow VGGish parameters to change during training, thus '
-    'fine-tuning VGGish. If False, VGGish parameters are fixed, thus using '
-    'VGGish as a fixed feature extractor.')
+	'train_vggish', True,
+	'If Frue, allow VGGish parameters to change during training, thus '
+	'fine-tuning VGGish. If False, VGGish parameters are fixed, thus using '
+	'VGGish as a fixed feature extractor.')
 
 flags.DEFINE_string(
-    'checkpoint', 'vggish_model.ckpt',
-    'Path to the VGGish checkpoint file.')
+	'checkpoint', 'vggish_model.ckpt',
+	'Path to the VGGish checkpoint file.')
 
 flags.DEFINE_string(
-    'dataset', 'path to dataset', 'path to dataset'
+	'dataset', 'path to dataset', 'path to dataset'
 )
 
 FLAGS = flags.FLAGS
@@ -48,12 +48,12 @@ def _get_examples_batch():
   to illustrate how the training code might work.
 
   Returns:
-    a tuple (features, labels) where features is a NumPy array of shape
-    [batch_size, num_frames, num_bands] where the batch_size is variable and
-    each row is a log mel spectrogram patch of shape [num_frames, num_bands]
-    suitable for feeding VGGish, while labels is a NumPy array of shape
-    [batch_size, num_classes] where each row is a multi-hot label vector that
-    provides the labels for corresponding rows in features.
+	a tuple (features, labels) where features is a NumPy array of shape
+	[batch_size, num_frames, num_bands] where the batch_size is variable and
+	each row is a log mel spectrogram patch of shape [num_frames, num_bands]
+	suitable for feeding VGGish, while labels is a NumPy array of shape
+	[batch_size, num_classes] where each row is a multi-hot label vector that
+	provides the labels for corresponding rows in features.
   """
   # Make a waveform for each class.
   num_seconds = 5
@@ -89,70 +89,70 @@ def _get_examples_batch():
   return (features, labels)
 
 def get_data(path_to_dataset):
-    classes = np.sort([c for c in os.listdir(path_to_dataset) if os.path.isdir(os.path.join(path_to_dataset, c))] )
-    print("Classes: ", classes)
+	classes = np.sort([c for c in os.listdir(path_to_dataset) if os.path.isdir(os.path.join(path_to_dataset, c))] )
+	print("Classes: ", classes)
 
-    labels = {}
-    for i in range(len(classes)):
-        labels[classes[i]]=i
+	labels = {}
+	for i in range(len(classes)):
+		labels[classes[i]]=i
 
-    files_lists = len(labels)*[None]
-    for i, c in enumerate(classes):
-        files_lists[i], _ = util.list_files(os.path.join(path_to_dataset, c))
+	files_lists = len(labels)*[None]
+	for i, c in enumerate(classes):
+		files_lists[i], _ = util.list_files(os.path.join(path_to_dataset, c))
 
-    Xdatas, Ylabels = [], []
-    for i, fl in enumerate(files_lists):
-        label = [0]*len(classes)
-        label[i] = 1
-        for f in fl:
-            r_data, sr = librosa.load(f)
-            data = vggish_input.waveform_to_examples(r_data, sr)
-            Xdatas.append(data)
-            Ylabels.append(label)
-    return Xdatas, Ylabels
+	Xdatas, Ylabels = [], []
+	for i, fl in enumerate(files_lists):
+		label = [0]*len(classes)
+		label[i] = 1
+		for f in fl:
+			r_data, sr = librosa.load(f)
+			data = vggish_input.waveform_to_examples(r_data, sr)
+			Xdatas.append(data)
+			Ylabels.append(label)
+	return Xdatas, Ylabels
 
 
 def main(_):
   with tf.Graph().as_default(), tf.Session() as sess:
-    # Define VGGish.
+	# Define VGGish.
     embeddings = vggish_slim.define_vggish_slim(FLAGS.train_vggish)
 
-    # Define a shallow classification model and associated training ops on top
-    # of VGGish.
+	# Define a shallow classification model and associated training ops on top
+	# of VGGish.
     with tf.variable_scope('mymodel'):
-      # Add a fully connected layer with 100 units.
-      num_units = 100
-      fc = slim.fully_connected(embeddings, num_units)
+        # Add a fully connected layer with 100 units.
+        num_units = 100
+        fc = slim.fully_connected(embeddings, num_units)
 
-      # Add a classifier layer at the end, consisting of parallel logistic
-      # classifiers, one per class. This allows for multi-class tasks.
-      logits = slim.fully_connected(
-          fc, _NUM_CLASSES, activation_fn=None, scope='logits')
-      tf.sigmoid(logits, name='prediction')
+        # Add a classifier layer at the end, consisting of parallel logistic
+        # classifiers, one per class. This allows for multi-class tasks.
+        logits = slim.fully_connected(
+            fc, _NUM_CLASSES, activation_fn=None, scope='logits')
+        tf.sigmoid(logits, name='prediction')
 
-      # Add training ops.
-      with tf.variable_scope('train'):
-        global_step = tf.Variable(
-            0, name='global_step', trainable=False,
-            collections=[tf.GraphKeys.GLOBAL_VARIABLES,
-                         tf.GraphKeys.GLOBAL_STEP])
+        # Add training ops.
+        with tf.variable_scope('train'):
+            global_step = tf.Variable(
+                0, name='global_step', trainable=False,
+                collections=[tf.GraphKeys.GLOBAL_VARIABLES,
+                                tf.GraphKeys.GLOBAL_STEP])
 
-        # Labels are assumed to be fed as a batch multi-hot vectors, with
-        # a 1 in the position of each positive class label, and 0 elsewhere.
-        labels = tf.placeholder(
-            tf.float32, shape=(None, _NUM_CLASSES), name='labels')
+            # Labels are assumed to be fed as a batch multi-hot vectors, with
+            # a 1 in the position of each positive class label, and 0 elsewhere.
+            labels = tf.placeholder(
+                tf.float32, shape=(None, _NUM_CLASSES), name='labels')
 
-        # Cross-entropy label loss.
-        xent = tf.nn.sigmoid_cross_entropy_with_logits(
-            logits=logits, labels=labels, name='xent')
-        loss = tf.reduce_mean(xent, name='loss_op')
-        tf.summary.scalar('loss', loss)
+            # Cross-entropy label loss.
+            xent = tf.nn.sigmoid_cross_entropy_with_logits(
+                logits=logits, labels=labels, name='xent')
+            loss = tf.reduce_mean(xent, name='loss_op')
+            tf.summary.scalar('loss', loss)
 
-        # We use the same optimizer and hyperparameters as used to train VGGish.
-        optimizer = tf.train.AdamOptimizer(
-            learning_rate=vggish_params.LEARNING_RATE,
-            epsilon=vggish_params.ADAM_EPSILON)
-        optimizer.minimize(loss, global_step=global_step, name='train_op')
+            # We use the same optimizer and hyperparameters as used to train VGGish.
+            optimizer = tf.train.AdamOptimizer(
+                learning_rate=vggish_params.LEARNING_RATE,
+                epsilon=vggish_params.ADAM_EPSILON)
+            optimizer.minimize(loss, global_step=global_step, name='train_op')
 
     # Initialize all variables in the model, and then load the pre-trained
     # VGGish checkpoint.
@@ -170,14 +170,15 @@ def main(_):
 
     # The training loop.
     for _ in range(FLAGS.num_batches):
-      (features, labels) = _get_examples_batch()
-      [num_steps, loss, _] = sess.run(
-          [global_step_tensor, loss_tensor, train_op],
-          feed_dict={features_tensor: features, labels_tensor: labels})
-      print('Step %d: loss %g' % (num_steps, loss))
+        (features, labels) = _get_examples_batch()
+        [num_steps, loss, _] = sess.run(
+            [global_step_tensor, loss_tensor, train_op],
+            feed_dict={features_tensor: features, labels_tensor: labels})
+        print('Step %d: loss %g' % (num_steps, loss))
 
 def test_run():
-    X, Y = get_data(FLAGS.dataset)
+	X, Y = get_data(FLAGS.dataset)
 
 if __name__ == '__main__':
 #   tf.app.run()
+    test_run()
