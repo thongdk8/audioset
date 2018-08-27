@@ -14,6 +14,8 @@ import librosa
 import os
 import utilities as util
 
+import tflearn
+
 flags = tf.app.flags
 slim = tf.contrib.slim
 
@@ -178,9 +180,56 @@ def main(_):
 				print('Step %d: loss %g' % (num_steps, loss))
 
 def test_run():
-	X, Y = get_data(FLAGS.dataset)
-	np.save('Xdatas.npy', X)
-	np.save('Ylables.npy', Y)
+	# X, Y = get_data(FLAGS.dataset)
+	# np.save('Xdatas.npy', X)
+	# np.save('Ylables.npy', Y)
+	X = np.load('Xdatas.npy')
+	Y = np.load('Ylabels.npy')
+	with tf.Graph().as_default(), tf.Session() as sess:
+		embeddings = vggish_slim.define_vggish_slim(FLAGS.train_vggish)
+		with tf.variable_scope('mymodel'):
+			num_units = 100
+			fc = slim.fully_connected(embeddings, num_units)
+
+			logits = slim.fully_connected(fc, _NUM_CLASSES, 
+							activation_fn=None, scope='logits')
+			tf.sigmoid(logits, name='prediction')
+
+			with tf.variable_op_scope('train'):
+				global_step = tf.Variable(0, name='global_step', trainable=False,
+						collections=[tf.GraphKeys.GLOBAL_VARIABLES,
+									tf.GraphKeys.GLOBAL_STEP])
+				
+				labels = tf.placeholder(tf.float32, shape=(None, _NUM_CLASSES), name='labels')
+
+				# Cross-entropy label loss
+				xent = tf.nn.sigmoid_cross_entropy_with_logits(
+					logits=logits, labels=labels, name='xent')
+				loss = tf.reduce_mean(xent, name='loss_op')
+				tf.summary.scalar('loss', loss)
+
+				optimizer = tf.train.AdamOptimizer(
+					learning_rate=vggish_params.LEARNING_RATE,
+					epsilon=vggish_params.ADAM_EPSILON)
+				optimizer.minimize(loss, global_step=global_step, name='train_op')
+
+		features_tensor = sess.graph.get_tensor_by_name(
+			vggish_params.INPUT_TENSOR_NAME)
+		labels_tensor = sess.graph.get_tensor_by_name('mymodel/train/labels:0')
+
+		accuracy = tf.reduce_mean(
+			tf.cast(tf.equal(tf.arg_max(logits, 1), tf.arg_max(labels_tensor, 1)), 
+			tf.float32), name='acc'
+		)
+		
+		trainOP = tflearn.TrainOp(loss=loss, optimizer=optimizer,
+			metric=accuracy, batch_size=128)
+		trainer = tflearn.Trainer(train_ops=trainOP, tensorboard_verbose=0, 
+			tensorboard_dir='./logs', best_checkpoint_path='./out_model/vggish_model',
+			session=sess)
+		trainer.fit({features_tensor:X, labels_tensor:Y}, n_epoch=1000, 
+		val_feed_dicts=0.1, shuffle_all=True)
+
 
 if __name__ == '__main__':
 #   tf.app.run()
