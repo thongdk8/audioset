@@ -195,7 +195,7 @@ def test_run():
 							activation_fn=None, scope='logits')
 			tf.sigmoid(logits, name='prediction')
 
-			with tf.variable_op_scope('train'):
+			with tf.variable_scope('train'):
 				global_step = tf.Variable(0, name='global_step', trainable=False,
 						collections=[tf.GraphKeys.GLOBAL_VARIABLES,
 									tf.GraphKeys.GLOBAL_STEP])
