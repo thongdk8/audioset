@@ -183,8 +183,8 @@ def test_run():
 	# X, Y = get_data(FLAGS.dataset)
 	# np.save('Xdatas.npy', X)
 	# np.save('Ylables.npy', Y)
-	X = np.load('Xdatas.npy')
-	Y = np.load('Ylabels.npy')
+	X = np.array(np.load('Xdatas.npy'))
+	Y = np.array(np.load('Ylabels.npy'))
 	with tf.Graph().as_default(), tf.Session() as sess:
 		embeddings = vggish_slim.define_vggish_slim(FLAGS.train_vggish)
 		with tf.variable_scope('mymodel'):
